@@ -45,5 +45,6 @@ class Driver {
     void extractPairs(std::string input, vecpairs *v_pairs);
     void extractTriples(std::string input, vectriples *v_triples);
     void extractVirtualAddress(int VA, t_triples *trips);
+    void enterIntoPA(int type, t_triples *trips);
 };
 #endif

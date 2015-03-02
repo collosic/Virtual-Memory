@@ -49,10 +49,10 @@ std::string Driver::processVirtualAddresses(std::string input, bool tld_test) {
         
         // extract s, p, w from the Virtual Address given 
         extractVirtualAddress(VA, &trips);        
-
-        try {
-            //PM.enterIntoVM(type, VA);
-        } catch (std::string e) {
+        
+        try { 
+            enterIntoPA(type, &trips);
+        } catch (std::string& e) {
             response += e;
         }
     }
@@ -122,4 +122,17 @@ void Driver::extractVirtualAddress(int VA, t_triples *trips) {
     w = (int)(generate.to_ulong());
 
     *trips = std::make_tuple(s, p, w);
+}
+
+
+void Driver::enterIntoPA(int type, t_triples *trips) {
+    int s = std::get<0>(*trips);
+    int p = std::get<1>(*trips);
+    int w = std::get<2>(*trips);
+    
+    if (type == 0) {
+        PM.readFromMem(s, p , w);
+    } else {
+        PM.writeToMem(s, p , w, &bitmap);
+    }
 }

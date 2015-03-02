@@ -2,28 +2,36 @@
 #define memory 
 
 #include <bitset>
+#include <tuple>
 
 // Constants
 const int NUM_FRAMES = 1024;
 const int NUM_WORDS_PER_FRAME = 512;
 const int SIZE_OF_PA = NUM_FRAMES * NUM_WORDS_PER_FRAME;
+const int NUM_FRAMES_PER_PT = 2;
+const int NUM_FRAMES_PER_DATA = 1;
 
 // Type Definition
-
+typedef std::tuple<int, int> t_pairs;
+typedef std::tuple<int, int, int> t_triples;
 
 // Classes
 class PhysicalMemory {
   private:
-    int PM[SIZE_OF_PA] = {0};    
+    int PM[SIZE_OF_PA];    
 
   public:
-    PhysicalMemory () {};
+    PhysicalMemory () : PM{0} {};
     ~PhysicalMemory () {};
 
     // Class Functions
     void enterIntoSegementTable(int s, int f) { PM[s] = f; };
     void enterIntoPageTable(int p, int s, int f) { PM[PM[s] + p] = f; };
-    void enterIntoVM(int type, int VA);
+    void readFromMem(int s, int p, int w);
+    void writeToMem(int s, int p, int w, std::bitset<NUM_FRAMES> *b);
+
+    // Helper functions
+    int allocateNewFrames(int num_frames, std::bitset<NUM_FRAMES> *b);
 };
 
 #endif
