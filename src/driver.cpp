@@ -1,67 +1,125 @@
+// driver.cpp
+
 #include "driver.h" 
 
-// Constructors initialization
 
-Driver::Driver() {
-    // Initialize the accepted commands
-    quit = false;
-    std::string tmp[] = {"init", "cr", "de", "req", "rel", "to", "quit", "lp", "lr", "pp", "pr"};
-    for (int i = 0; i < NUM_COMMANDS; i++) {
-        map[tmp[i]] = i + 1;            
+
+void Driver::initSegementTable(std::string input) {
+    // we need to extract pairs and enter the pairs into the segement table
+    vecpairs seg_pairs;
+    extractPairs(input, &seg_pairs);
+
+    // now iterate through all the pairs entering them into the segement table
+    for (std::tuple<int, int> t : seg_pairs) {
+        int s = std::get<0>(t);
+        int f = std::get<1>(t);
+
+        // now enter the information into the segement table
+        PM.enterIntoSegementTable(s, f);
+        bitmap.set(f / NUM_WORDS_PER_FRAME, 1);
     }
-
-    // Create a manager
-    manager = new Manager();
 }
 
-Driver::~Driver() {
-    if (manager != nullptr)
-        delete manager;
-    manager = nullptr;
-}
+void Driver::initPageTable(std::string input) {
+    vectriples v_triples;
+    extractTriples(input, &v_triples);
 
-
-std::string Driver::interface(vecstr *in) {
-    std::string command = in->front();
-    
-    // remove the first element that was extracted into command
-    in->erase(in->begin());
-    std::map<std::string, int>::iterator value = map.find(command);
+    for(t_triples t : v_triples) {
+        int p = std::get<0>(t);
+        int s = std::get<1>(t);
+        int f = std::get<2>(t);
+        PM.enterIntoPageTable(p, s, f);
         
-    // we need to evaluate the command and then determine if the user has typed
-    // in too many arguments for each command
-    std::string response;
-    switch (value->second) {
-        case 1:     response = in->size() > 0 ? "init takes no arguments" : manager->initialize();
-                    break;
-        case 2:     response = in->size() == 2 ? manager->create(in) : "invalid use of cr";
-                    break;
-        case 3:     response = in->size() == 1 ? manager->destroy(in) : "invalid use of de";
-                    break;
-        case 4:     response = in->size() == 2 ? manager->request(in) : "invalid use of req";
-                    break;
-        case 5:     response = in->size() == 2 ? manager->release(in) : "invalid use of rel";
-                    break;
-        case 6:     response = in->size() == 0 ? manager->timeout() : "invalid use of to"; 
-                    break;
-        case 7:     if (manager != nullptr)
-                        delete manager;
-                    manager = nullptr;
-                    quit = true;
-                    response ="Good bye";
-                    break;
-        case 8:    
-                    break;
-        case 9:     
-                    break;
-        case 10:    
-                    break;
-        case 11:    
-                    break;
-        default:    response = "error(invalid command: " + command + ")"; 
-                    break;
-    }
-    in->clear();
-    return response;
-}    
+        // update the bitmap to reflect the newly created frame
+        bitmap.set(f / NUM_WORDS_PER_FRAME, 1);
+    }    
+}
 
+
+std::string Driver::processVirtualAddresses(std::string input, bool tld_test) {
+    std::string response;
+    vecpairs v_pairs;
+    t_triples trips;
+    extractPairs(input, &v_pairs);
+
+    // run the VA agains the PM and returna response
+    for(t_pairs t : v_pairs) {
+        int type = std::get<0>(t);
+        int VA = std::get<1>(t);
+        
+        // extract s, p, w from the Virtual Address given 
+        extractVirtualAddress(VA, &trips);        
+
+        try {
+            //PM.enterIntoVM(type, VA);
+        } catch (std::string e) {
+            response += e;
+        }
+    }
+    return response;   
+}
+
+void Driver::extractPairs(std::string input, vecpairs *v_pairs) {
+    // extract two numbers at a time and place them in the tuples
+    std::vector<std::string> _tuple;
+    std::stringstream ss(input);
+    std::string buf;
+    while (ss >> buf) {
+        _tuple.push_back(buf);
+
+        // run a test to see if the temporary vector is size 2 
+        if (_tuple.size() == 2) {
+            v_pairs->push_back(std::make_tuple(std::stoi(_tuple.at(0)), std::stoi(_tuple.at(1))));
+            _tuple.clear();
+        }
+    }
+}
+
+void Driver::extractTriples(std::string input, vectriples *v_triples) {
+    // extract two numbers at a time and place them in the tuples
+    std::vector<std::string> _tuple;
+    std::stringstream ss(input);
+    std::string buf;
+    while (ss >> buf) {
+        _tuple.push_back(buf);
+
+        // run a test to see if the temporary vector is size 2 
+        if (_tuple.size() == 3) {
+            v_triples->push_back(std::make_tuple(std::stoi(_tuple.at(0)), 
+                                        std::stoi(_tuple.at(1)), std::stoi(_tuple.at(2))));
+            _tuple.clear();
+        }
+    }
+}
+
+
+void Driver::extractVirtualAddress(int VA, t_triples *trips) {
+    // generate a new bitset with 28 bits and begin extracting
+    int s_shift = 19;
+    int p_shift = 9;
+    int s;
+    int p;
+    int w;
+
+    std::bitset<VA_SIZE> virtual_address(VA);
+    std::bitset<VA_SIZE> s_mask(0xFF80000);
+    std::bitset<VA_SIZE> p_mask(0x007FE00);
+    std::bitset<VA_SIZE> f_mask(0x00001FF);
+
+    std::bitset<VA_SIZE> generate = virtual_address;
+
+    generate &= s_mask;
+    generate >>= s_shift;
+    s = (int)(generate.to_ulong());
+
+    generate = virtual_address;
+    generate &= p_mask;
+    generate >>= p_shift;
+    p  = (int)(generate.to_ulong());
+
+    generate = virtual_address;
+    generate &= f_mask;
+    w = (int)(generate.to_ulong());
+
+    *trips = std::make_tuple(s, p, w);
+}

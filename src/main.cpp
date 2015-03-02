@@ -1,87 +1,59 @@
 #include "driver.h"
-void runDriver(bool hasArgument, std::string commands);
+
+void withoutTLB(std::string input1, std::string input2);
+void withTLB(std::string input1, std::string input2);
 
 int main(int argc, char* argv[])
 {
-    if (argc == 2) {
-        std::string incoming(argv[1]);
-        runDriver(true, incoming);
-    } else if (argc == 1) {
-        std::string incoming;
-        runDriver(false, incoming);
+    if (argc < 3) {
+        std::cout << "too few arguments, use -h for help" << std::endl;
+    } else if (argc > 4) {
+        std::cout << "too many arguments, use -h for help" << std::endl;
     } else {
-        std::cerr << "too many arguments used" << std::endl;
-        return -1;
+        if (argc == 4) {
+            std::string input1(argv[1]);
+            if (input1 != "-t") 
+                std::cout << "invalid flag" << std::endl;
+
+            std::string input2(argv[2]);
+            std::string input3(argv[3]);
+
+            // call the appropriate function
+            withoutTLB(input2, input3);
+        } else {
+            std::string input1(argv[1]);
+            std::string input2(argv[2]);
+            withoutTLB(input1, input2);
+        }    
     }
     return 0;
 }
 
-
-void runDriver(bool hasArgument, std::string commands) {
-    std::string rawInput, buf, o;
+void withoutTLB(std::string input1, std::string input2) {
+    std::string raw_input, buf, o;
+    std::ifstream proc_pm(input1);
+    std::ifstream proc_va(input2);
+    std::ofstream out("112335291.txt");
     Driver *driver = new Driver();
-    vecstr in;
-
-    if (hasArgument) { 
-        std::ofstream out("11233529.txt");
-        std::ifstream incoming(commands);
-        o += "init ";
-        if (!incoming && !out) 
-            std::cout << "error opening argument file, resuming default behaviour" << std::endl;
-        else {
-            while (std::getline(incoming, rawInput)) {
-                const char *c = rawInput.c_str();
-                if (rawInput == "\n" || rawInput == "\r\n" || 
-                        rawInput == "" || rawInput == "\r" || c[0] == '#') { 
-                    continue;
-                }
-                std::stringstream ss(rawInput);
-                while (ss >> buf) { 
-                    in.push_back(buf);
-                }
-                o += driver->interface(&in) + " ";
-            }
-            out << o;
-            std::cout << o << std::endl;
-            incoming.close();
-            out.close();
-        }
+    
+    if(proc_pm.is_open()) {
+        std::cout << "fuck" << std::endl;
     }
+    // We know that input1.txt will only be two lines long and so we can process each one separately
+    std::getline(proc_pm, raw_input);
+    driver->initSegementTable(raw_input);
 
-   /*
-   while(true) {
-        std::getline(std::cin, rawInput);
-        std::stringstream ss(rawInput);
-        while (ss >> buf) 
-               in.push_back(buf);
-        std::cout << driver->interface(&in) << std::endl;
-        if(driver->getQuit()) {
-            break;
-        }
-   }*/
+    std::getline(proc_pm, raw_input);
+    driver->initPageTable(raw_input);
 
-   delete driver;
-
+    std::getline(proc_va, raw_input);
+    out << driver->processVirtualAddresses(raw_input, false);
+    
+    // close all the files that were opened.
+    proc_pm.close();
+    proc_va.close();
+    out.close();
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
