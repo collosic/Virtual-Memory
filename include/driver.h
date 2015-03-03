@@ -8,6 +8,7 @@
 #include <vector>
 #include <tuple>
 #include <bitset>
+#include <list>
 
 // Header Files
 #include "memory.h"
@@ -22,19 +23,17 @@ typedef std::tuple<int, int> t_pairs;
 typedef std::tuple<int, int, int> t_triples;
 typedef std::vector<t_pairs> vecpairs;
 typedef std::vector<t_triples> vectriples;
+typedef std::list<std::pair<int, int>> lru;
 
 class Driver {
   private:
-    PhysicalMemory PM;
     std::bitset<NUM_FRAMES> bitmap;
-    
-
-    // Data Structures required for the driver
-    
+    PhysicalMemory PM;
+    lru TLB; 
 
   public:
     // Constructors
-    Driver() : bitmap(1) {};
+    Driver() : bitmap(1), PM(&bitmap) {};
     ~Driver() {};
 
     // Class Methods
@@ -45,6 +44,8 @@ class Driver {
     void extractPairs(std::string input, vecpairs *v_pairs);
     void extractTriples(std::string input, vectriples *v_triples);
     void extractVirtualAddress(int VA, t_triples *trips);
+    void extractForTLB(int VA, t_pairs *pair);
     void enterIntoPA(int type, t_triples *trips);
+    void tryTLBAccess(int type, int VA);
 };
 #endif

@@ -36,7 +36,7 @@ void Driver::initPageTable(std::string input) {
 }
 
 
-std::string Driver::processVirtualAddresses(std::string input, bool tld_test) {
+std::string Driver::processVirtualAddresses(std::string input, bool tlb_test) {
     std::string response;
     vecpairs v_pairs;
     t_triples trips;
@@ -48,12 +48,21 @@ std::string Driver::processVirtualAddresses(std::string input, bool tld_test) {
         int VA = std::get<1>(t);
         
         // extract s, p, w from the Virtual Address given 
+        try {
+            if (tlb_test) {
+                tryTLBAccess(type, VA);   
+            }
+        } catch  (std::string& e) {
+            response += e + " ";
+            continue;
+        } 
+        
         extractVirtualAddress(VA, &trips);        
         
         try { 
             enterIntoPA(type, &trips);
         } catch (std::string& e) {
-            response += e;
+            response += e + " ";
         }
     }
     return response;   
@@ -95,35 +104,49 @@ void Driver::extractTriples(std::string input, vectriples *v_triples) {
 
 void Driver::extractVirtualAddress(int VA, t_triples *trips) {
     // generate a new bitset with 28 bits and begin extracting
-    int s_shift = 19;
-    int p_shift = 9;
-    int s;
-    int p;
-    int w;
-
     std::bitset<VA_SIZE> virtual_address(VA);
     std::bitset<VA_SIZE> s_mask(0xFF80000);
     std::bitset<VA_SIZE> p_mask(0x007FE00);
-    std::bitset<VA_SIZE> f_mask(0x00001FF);
+    std::bitset<VA_SIZE> w_mask(0x00001FF);
+    int s_shift = 19;
+    int p_shift = 9;
 
     std::bitset<VA_SIZE> generate = virtual_address;
 
     generate &= s_mask;
     generate >>= s_shift;
-    s = (int)(generate.to_ulong());
+    int s = (int)(generate.to_ulong());
 
     generate = virtual_address;
     generate &= p_mask;
     generate >>= p_shift;
-    p  = (int)(generate.to_ulong());
+    int p  = (int)(generate.to_ulong());
 
     generate = virtual_address;
-    generate &= f_mask;
-    w = (int)(generate.to_ulong());
+    generate &= w_mask;
+    int w = (int)(generate.to_ulong());
 
     *trips = std::make_tuple(s, p, w);
 }
 
+void Driver::extractForTLB(int VA, t_pairs *pair) {
+    std::bitset<VA_SIZE> virtual_address(VA);
+    std::bitset<VA_SIZE> sp_mask(0xFFFFE00);
+    std::bitset<VA_SIZE> w_mask(0x00001FF);
+    int sp_shift = 9;
+
+    std::bitset<VA_SIZE> generate = virtual_address;
+
+    generate &= sp_mask;
+    generate >>= sp_shift;
+    int sp = (int)(generate.to_ulong());
+
+    generate = virtual_address;
+    generate &= w_mask;
+    int w = (int)(generate.to_ulong());
+
+   *pair = std::make_tuple(sp, w);    
+}
 
 void Driver::enterIntoPA(int type, t_triples *trips) {
     int s = std::get<0>(*trips);
@@ -131,8 +154,57 @@ void Driver::enterIntoPA(int type, t_triples *trips) {
     int w = std::get<2>(*trips);
     
     if (type == 0) {
-        PM.readFromMem(s, p , w);
+        PM.readFromMem(s, p, w);
     } else {
-        PM.writeToMem(s, p , w, &bitmap);
+        PM.writeToMem(s, p , w);
+    }
+}
+
+
+void Driver::tryTLBAccess(int type, int VA) {
+    // need to extract sp and w from the VA 
+    t_pairs pair;
+    extractForTLB(VA, &pair);
+
+    int sp = std::get<0>(pair);
+    int w = std::get<1>(pair);
+    int f = -1;
+
+    int current_tlb_size = TLB.size();
+   
+    // search the tlb for sp match
+    for(std::pair<int, int> p : TLB) {
+        if (sp == std::get<0>(p)) {
+            f = std::get<1>(p);            
+            // we now need to move this to the head of the list
+            std::pair<int, int> _p = p;
+            TLB.remove(p);
+            TLB.push_front(_p);
+        }
+    } 
+    
+    // check and see if we had a hit on the TLB 
+    if (f != -1) {
+        throw std::string("h ") + std::to_string(f + w); 
+    }
+
+    // if we get here it mean we got a miss and we must search the PM
+    t_triples trips;
+    extractVirtualAddress(VA, &trips);
+
+    try {
+        enterIntoPA(type, &trips);    
+    } catch (std::string e) {
+        if (e == "pf" || e == "err") {
+            throw e;
+        }
+
+        // here we must place the new frame and sp into the TLB
+        f = std::stoi(e);
+        if (current_tlb_size == 4) {
+            TLB.pop_back();
+        }  
+        TLB.push_front(std::make_pair(sp, f));
+        throw e;
     }
 }

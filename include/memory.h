@@ -19,19 +19,20 @@ typedef std::tuple<int, int, int> t_triples;
 class PhysicalMemory {
   private:
     int PM[SIZE_OF_PA];    
+    std::bitset<NUM_FRAMES> *b;
 
   public:
-    PhysicalMemory () : PM{0} {};
+    PhysicalMemory(std::bitset<NUM_FRAMES> *bitmap) : PM{0}, b(bitmap) {};
     ~PhysicalMemory () {};
 
     // Class Functions
     void enterIntoSegementTable(int s, int f) { PM[s] = f; };
     void enterIntoPageTable(int p, int s, int f) { PM[PM[s] + p] = f; };
     void readFromMem(int s, int p, int w);
-    void writeToMem(int s, int p, int w, std::bitset<NUM_FRAMES> *b);
+    void writeToMem(int s, int p, int w);
 
     // Helper functions
-    int allocateNewFrames(int num_frames, std::bitset<NUM_FRAMES> *b);
+    int allocateNewFrames(int num_frames);
 };
 
 #endif
