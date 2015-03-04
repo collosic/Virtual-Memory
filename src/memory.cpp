@@ -53,7 +53,7 @@ void PhysicalMemory::writeToMem(int s, int p, int w) {
 int PhysicalMemory::allocateNewFrames(int num_frames) {
     // find x number of free frames, x depends on the num_frames and must be consecutive
     int count = 0;
-    for (std::size_t i = 0; i < b->size(); i += num_frames) {
+    for (std::size_t i = 0; i < b->size(); i++) {
         if (b->test(i)) {
             count++;
         } else {

@@ -205,6 +205,6 @@ void Driver::tryTLBAccess(int type, int VA) {
             TLB.pop_back();
         }  
         TLB.push_front(std::make_pair(sp, f));
-        throw e;
+        throw std::string("m ") + e;
     }
 }
