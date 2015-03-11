@@ -26,27 +26,27 @@ void PhysicalMemory::readFromMem(int s, int p, int w) {
 }
 
 void PhysicalMemory::writeToMem(int s, int p, int w) {
-    s = PM[s];
-    if (s == -1) {
+    int _s = PM[s];
+    if (_s == -1) {
         throw std::string("pf");
     }
 
-    if (s == 0) {
-        s = allocateNewFrames(NUM_FRAMES_PER_PT);
-        s = PM[s];
+    if (_s == 0) {
+        _s = allocateNewFrames(NUM_FRAMES_PER_PT);
+        PM[s] = _s;
     }
     
-    p = PM[s + p];
-    if (p == -1) {
+    int _p = PM[PM[s] + p];
+    if (_p == -1) {
         throw std::string("pf");
     }
 
-    if (p == 0) {
-        p = allocateNewFrames(NUM_FRAMES_PER_DATA);
-        p = PM[s + p];
+    if (_p == 0) {
+        _p = allocateNewFrames(NUM_FRAMES_PER_DATA);
+        PM[PM[s] + p] = _p;
     }
 
-    throw std::to_string(p + w);
+    throw std::to_string(_p + w);
 }
 
 
@@ -54,7 +54,7 @@ int PhysicalMemory::allocateNewFrames(int num_frames) {
     // find x number of free frames, x depends on the num_frames and must be consecutive
     int count = 0;
     for (std::size_t i = 0; i < b->size(); i++) {
-        if (b->test(i)) {
+        if (!b->test(i)) {
             count++;
         } else {
             count = 0;
@@ -69,7 +69,7 @@ int PhysicalMemory::allocateNewFrames(int num_frames) {
             } 
 
             b->set(i);
-            return i;        
+            return i * NUM_WORDS_PER_FRAME;        
         }
     }   
     // this means no more free space

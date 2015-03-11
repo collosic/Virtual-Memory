@@ -14,16 +14,16 @@
 #include "memory.h"
 
 // Constants
-const int pairs = 2;
-const int triples = 3;
+const int PAIR = 2;
+const int TRIPLE = 3;
 const int VA_SIZE = 28;
 
 // Typedef
-typedef std::tuple<int, int> t_pairs;
-typedef std::tuple<int, int, int> t_triples;
-typedef std::vector<t_pairs> vecpairs;
-typedef std::vector<t_triples> vectriples;
-typedef std::list<std::pair<int, int>> lru;
+typedef std::pair<int, int> pairs;
+typedef std::tuple<int, int, int> triples;
+typedef std::vector<pairs> vecpairs;
+typedef std::vector<triples> vectriples;
+typedef std::list<pairs> lru;
 
 class Driver {
   private:
@@ -43,9 +43,9 @@ class Driver {
 
     void extractPairs(std::string input, vecpairs *v_pairs);
     void extractTriples(std::string input, vectriples *v_triples);
-    void extractVirtualAddress(int VA, t_triples *trips);
+    void extractVirtualAddress(int VA, triples *trips);
     void extractForTLB(int VA, t_pairs *pair);
-    void enterIntoPA(int type, t_triples *trips);
+    void enterIntoPA(int type, triples *trips);
     void tryTLBAccess(int type, int VA);
 };
 #endif

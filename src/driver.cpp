@@ -10,13 +10,18 @@ void Driver::initSegementTable(std::string input) {
     extractPairs(input, &seg_pairs);
 
     // now iterate through all the pairs entering them into the segement table
-    for (std::tuple<int, int> t : seg_pairs) {
-        int s = std::get<0>(t);
-        int f = std::get<1>(t);
+    for (pairs p : seg_pairs) {
+        int s = std::get<0>(p);
+        int f = std::get<1>(p);
 
         // now enter the information into the segement table
         PM.enterIntoSegementTable(s, f);
-        bitmap.set(f / NUM_WORDS_PER_FRAME, 1);
+        // we need to allocate two frames for the page tables being set
+        if (f > 0) {
+            int _frame = f / NUM_WORDS_PER_FRAME;
+            bitmap.set(_frame, 1);
+            bitmap.set(_frame + 1, 1); 
+        }
     }
 }
 
@@ -31,7 +36,9 @@ void Driver::initPageTable(std::string input) {
         PM.enterIntoPageTable(p, s, f);
         
         // update the bitmap to reflect the newly created frame
-        bitmap.set(f / NUM_WORDS_PER_FRAME, 1);
+        if (f > 0) {
+            bitmap.set(f / NUM_WORDS_PER_FRAME, 1);
+        }
     }    
 }
 
@@ -51,19 +58,14 @@ std::string Driver::processVirtualAddresses(std::string input, bool tlb_test) {
         try {
             if (tlb_test) {
                 tryTLBAccess(type, VA);   
+            } else {
+                extractVirtualAddress(VA, &trips);
+                enterIntoPA(type, &trips);
             }
         } catch  (std::string& e) {
             response += e + " ";
-            continue;
         } 
-        
-        extractVirtualAddress(VA, &trips);        
-        
-        try { 
-            enterIntoPA(type, &trips);
-        } catch (std::string& e) {
-            response += e + " ";
-        }
+
     }
     return response;   
 }
@@ -78,7 +80,7 @@ void Driver::extractPairs(std::string input, vecpairs *v_pairs) {
 
         // run a test to see if the temporary vector is size 2 
         if (_tuple.size() == 2) {
-            v_pairs->push_back(std::make_tuple(std::stoi(_tuple.at(0)), std::stoi(_tuple.at(1))));
+            v_pairs->push_back(std::make_pair(std::stoi(_tuple.at(0)), std::stoi(_tuple.at(1))));
             _tuple.clear();
         }
     }
