@@ -176,7 +176,6 @@ void Driver::tryTLBAccess(int type, int VA) {
    
     // search the tlb for sp match
     for(pairs p : TLB) {
-        //pairs p = TLB.
         if (sp == std::get<0>(p)) {
             f = std::get<1>(p);            
             // we now need to move this to the head of the list
