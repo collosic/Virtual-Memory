@@ -175,13 +175,15 @@ void Driver::tryTLBAccess(int type, int VA) {
     int current_tlb_size = TLB.size();
    
     // search the tlb for sp match
-    for(std::pair<int, int> p : TLB) {
+    for(pairs p : TLB) {
+        //pairs p = TLB.
         if (sp == std::get<0>(p)) {
             f = std::get<1>(p);            
             // we now need to move this to the head of the list
-            std::pair<int, int> _p = p;
+            pairs _p = p;
             TLB.remove(p);
             TLB.push_front(_p);
+            break;
         }
     } 
     
@@ -202,8 +204,10 @@ void Driver::tryTLBAccess(int type, int VA) {
         }
 
         // here we must place the new frame and sp into the TLB
-        f = std::stoi(e);
-        if (current_tlb_size == 4) {
+        int f_plus_w = std::stoi(e);
+        // we must subtract w from the return value in "e"
+        f = f_plus_w - std::get<2>(trips);
+        if (current_tlb_size == TLB_MAX_SIZE) {
             TLB.pop_back();
         }  
         TLB.push_front(std::make_pair(sp, f));

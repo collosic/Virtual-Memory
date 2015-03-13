@@ -17,6 +17,7 @@
 const int PAIR = 2;
 const int TRIPLE = 3;
 const int VA_SIZE = 28;
+const int TLB_MAX_SIZE = 4;
 
 // Typedef
 typedef std::pair<int, int> pairs;
